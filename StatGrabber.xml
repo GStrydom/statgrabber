@@ -100,6 +100,15 @@
 		   sequence="1"
   		></alias>
   		<alias
+		   script="showStats"
+		   match="^showstats$"
+		   enabled="y"
+		   regexp="y"
+		   send_to="12"
+		   keep_evaluating="y"
+		   sequence="1"
+  		></alias>
+  		<alias
 		   script="exportStats"
 		   match="^exportstats$"
 		   enabled="y"
@@ -111,72 +120,68 @@
     </aliases>
     <script>
 		<![CDATA[
-			local socket = require('socket')
+			require "gmcphelper"
 
 			local totalLevels = 0
 			local totalGold = 0
 			local totalTrains = 0
 			local totalPups = 0
-			local clanTax = 0
-			local startTime = 0.0
-			local endTime = 0.0
+			local isTracking = false
 			
 			function tallyLevels(name, line, wildcards)
+				playerLevel = gmcpval("status.level")
 				if playerLevel == '200' or '201' then
 					return
 				end
-				totalLevels = totalLevels + 1 
+				if isTracking == true then
+					totalLevels = totalLevels + 1
+				end 
 			end
 			
 			function tallyGold(name, line, wildcards)
 				levelGold = wildcards[1]
-				totalGold = totalGold + tonumber(levelGold)
+				if isTracking == true then
+					totalGold = totalGold + tonumber(levelGold)
+				end
+			end
+
+			function showStats(name, line, wildcards)
+
 			end
 			
 			function tallyTrains(name, line, wildcards)
-				levelTrains = wildcards[1]
-				totalTrains = totalTrains + tonumber(levelTrains)
+				levelTrains = wildcards[5]
+				if isTracking == true then
+					totalTrains = totalTrains + tonumber(levelTrains)
+				end
 			end
 			
 			function tallyPups(name, line, wildcards)
 				levelPups = wildcards[1]
-				totalPups = totalPups + tonumber(levelPups)
+				if isTracking == true then
+					totalPups = totalPups + tonumber(levelPups)
+				end
 			end
 			
 			function tallyLucky(name, line, wildcards)
 				luckyTrains = wildcards[1]
-				totalTrains = totalTrains + tonumber(luckyTrains)
+				if isTracking == true then
+					totalTrains = totalTrains + tonumber(luckyTrains)
+				end
 			end
 			
 			function removeTax(name, line, wildcards)
-				totalGold = totalGold - wildcards[1]
+				if isTracking == true then
+					totalGold = totalGold - wildcards[1]
+				end
 			end
 			
 			function startTracking(name, line, wildcards)
-				startTime = socket.gettime() - 3800
-
-				while true do
-
-	    			-- Get the time ellapsed and convert it to hours, minutes and seconds
-	    			ellapsed = secondsEllapsed()
-	    			hours = math.floor(ellapsed / 3600)
-	    			minutes = math.floor((ellapsed - (hours * 3600)) / 60)
-	    			seconds = math.floor((ellapsed - (hours * 3600) - (minutes * 60)))
-
-	    			-- Print the time ellapsed to the command line
-	    			print(hours .. 'h', minutes .. 'm', seconds .. 's')
-
-	    			-- Wait a second between each update
-	    			socket.sleep(1)
-				end
-			end
-
-			function secondsEllapsed(name, line, wildcards)
-				return socket.gettime() - startTime
+				isTracking = true
 			end
 			
 			function stopTracking(name, line, wildcards)
-				
+				isTracking = false
 			end
 			
 			function resetSession(name, line, wildcards)
@@ -208,14 +213,11 @@
 			end
 			
 			function OnPluginInstall()
-				if GetVariable ("enabled") == "false" then
-				ColourNote ("yellow", "", "Warning: Plugin " .. GetPluginName ().. " is currently disabled.")
-				check (EnablePlugin(GetPluginID (), false))
-				return
+				
 			end
 			
 			function OnPluginEnable()
-				send "Plugin loaded successfully"
+				
 			end
 			
 			function OnPluginDisable()
