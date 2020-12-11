@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE muclient>
+<muclient>
+    <plugin
+    name="Aardwolf_Stats_Grabber"
+    author="Jyscal"
+    id="59e2bd0f5bba5ec4a22e294a"
+    language="Lua"
+    purpose="Track and export stats."
+    save_state="y"
+    date_written="2020-12-06 06:12:14"
+    requires="4.43"
+    version="1.0"
+    >
+    <description trim="y">
+        <![CDATA[
+            Track levels, Gold, Trains and Pups gained
+            during a session. Sessions can be started and
+            stopped at any time and then exported to upload
+            to AardStats Website
+        ]]>
+    </description>
+    </plugin>
+    
+    <triggers>
+    	<trigger
+			enabled="y"
+			regexp="y"
+			group="trackers"
+			match="^You get (.+) gold coins from (.+) of (.+).$"
+			keep_evaluating="y"
+			omit_from_output="n"
+			script="tallyGold"
+			sequence="100"
+			send_to="12"
+		></trigger>
+		<trigger
+			enabled="y"
+			regexp="y"
+			group="trackers"
+			match="^You raise a level! You are now level (.+).$"
+			keep_evaluating="y"
+			omit_from_output="y"
+			script="tallyLevels"
+			sequence="100"
+			send_to="12"
+		></trigger>
+		<trigger
+			enabled="y"
+			regexp="y"
+			group="trackers"
+			match="^You gain (.+) hit points, (.+) mana, (.+) moves, (.+) practices, (.+) trains and (.+) instinct trains.$"
+			keep_evaluating="y"
+			omit_from_output="y"
+			script="tallyTrains"
+			sequence="100"
+			send_to="12"
+		></trigger>
+		<trigger
+			enabled="y"
+			regexp="y"
+			group="trackers"
+			match="^Lucky! You gain an extra (.+) training sessions!$"
+			keep_evaluating="y"
+			omit_from_output="y"
+			script="tallyLucky"
+			sequence="100"
+			send_to="12"
+		></trigger>
+		<trigger
+			enabled="y"
+			regexp="y"
+			group="trackers"
+			match="^You are taxed (.+) gold coins by your clan.$"
+			keep_evaluating="y"
+			omit_from_output="y"
+			script="removeTax"
+			sequence="100"
+			send_to="12"
+		></trigger>
+    </triggers>
+
+    <aliases>
+		<alias
+		   script="startTracking"
+		   match="^starttrack$"
+		   enabled="y"
+		   regexp="y"
+		   send_to="12"
+		   keep_evaluating="y"
+		   sequence="1"
+  		></alias>
+		<alias
+		   script="stopTracking"
+		   match="^stoptrack$"
+		   enabled="y"
+		   regexp="y"
+		   send_to="12"
+		   keep_evaluating="y"
+		   sequence="1"
+  		></alias>
+  		<alias
+		   script="exportStats"
+		   match="^exportstats$"
+		   enabled="y"
+		   regexp="y"
+		   send_to="12"
+		   keep_evaluating="y"
+		   sequence="1"
+  		></alias>
+    </aliases>
+    <script>
+		<![CDATA[
+			local socket = require('socket')
+
+			local totalLevels = 0
+			local totalGold = 0
+			local totalTrains = 0
+			local totalPups = 0
+			local clanTax = 0
+			local startTime = 0.0
+			local endTime = 0.0
+			
+			function tallyLevels(name, line, wildcards)
+				if playerLevel == '200' or '201' then
+					return
+				end
+				totalLevels = totalLevels + 1 
+			end
+			
+			function tallyGold(name, line, wildcards)
+				levelGold = wildcards[1]
+				totalGold = totalGold + tonumber(levelGold)
+			end
+			
+			function tallyTrains(name, line, wildcards)
+				levelTrains = wildcards[1]
+				totalTrains = totalTrains + tonumber(levelTrains)
+			end
+			
+			function tallyPups(name, line, wildcards)
+				levelPups = wildcards[1]
+				totalPups = totalPups + tonumber(levelPups)
+			end
+			
+			function tallyLucky(name, line, wildcards)
+				luckyTrains = wildcards[1]
+				totalTrains = totalTrains + tonumber(luckyTrains)
+			end
+			
+			function removeTax(name, line, wildcards)
+				totalGold = totalGold - wildcards[1]
+			end
+			
+			function startTracking(name, line, wildcards)
+				startTime = socket.gettime() - 3800
+
+				while true do
+
+	    			-- Get the time ellapsed and convert it to hours, minutes and seconds
+	    			ellapsed = secondsEllapsed()
+	    			hours = math.floor(ellapsed / 3600)
+	    			minutes = math.floor((ellapsed - (hours * 3600)) / 60)
+	    			seconds = math.floor((ellapsed - (hours * 3600) - (minutes * 60)))
+
+	    			-- Print the time ellapsed to the command line
+	    			print(hours .. 'h', minutes .. 'm', seconds .. 's')
+
+	    			-- Wait a second between each update
+	    			socket.sleep(1)
+				end
+			end
+
+			function secondsEllapsed(name, line, wildcards)
+				return socket.gettime() - startTime
+			end
+			
+			function stopTracking(name, line, wildcards)
+				
+			end
+			
+			function resetSession(name, line, wildcards)
+			
+			end
+			
+			function exportStats(name, line, wildcards)
+				nowTable = os.date('*t')
+				nowYear = nowTable.year
+				nowMonth = nowTable.month
+				nowDay = nowTable.day
+				exportDate = nowDay.."/"..nowMonth.."/"..nowYear
+
+				totalLevels = tostring(totalLevels)
+				totalGold = tostring(totalGold)
+				totalTrains = tostring(totalTrains)
+				totalPups = tostring(totalPups)
+
+				file = io.open("C:/Users/cheryl/Desktop/stats_export.txt", "w+")
+				file:write(exportDate..","..totalLevels..","..totalGold..","..totalTrains..","..totalPups)
+				file:close()
+			end
+			
+			function OnPluginInstall()
+				
+			end
+			
+			function OnPluginEnable()
+				send "Plugin loaded successfully"
+			end
+			
+			function OnPluginDisable()
+			
+			end
+			
+			function OnPluginSaveState()
+			
+			end
+		]]>
+    </script>
+</muclient>
