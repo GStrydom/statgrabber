@@ -180,7 +180,12 @@
 			end
 			
 			function resetSession(name, line, wildcards)
-			
+				totalLevels = 0
+				totalGold = 0
+				totalTrains = 0
+				totalPups = 0
+				
+				ColourTell("white", "blue", "Session reset.")
 			end
 			
 			function exportStats(name, line, wildcards)
@@ -198,10 +203,15 @@
 				file = io.open("C:/Users/cheryl/Desktop/stats_export.txt", "w+")
 				file:write(exportDate..","..totalLevels..","..totalGold..","..totalTrains..","..totalPups)
 				file:close()
+				
+				ColourTell("white", "blue", "Stats have been exported succesfully.")
 			end
 			
 			function OnPluginInstall()
-				
+				if GetVariable ("enabled") == "false" then
+				ColourNote ("yellow", "", "Warning: Plugin " .. GetPluginName ().. " is currently disabled.")
+				check (EnablePlugin(GetPluginID (), false))
+				return
 			end
 			
 			function OnPluginEnable()
